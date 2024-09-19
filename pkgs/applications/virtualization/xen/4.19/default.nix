@@ -48,6 +48,11 @@ callPackage (import ../generic/default.nix {
       hash = "sha256-htOvV43Hw5K05g0SF3po69HncLyma3BtgpqYSdzRG4s=";
       patches = [ ];
     };
+    miniOS = {
+      rev = "8b038c7411ae7e823eaf6d15d5efbe037a07197a";
+      hash = "sha256-WDoQKgNOFEmv5DJ/y5FKc5wJraea07qWsqkWD/f+6vU=";
+      patches = [ ];
+    };
     ipxe = {
       rev = "1d1cf74a5e58811822bee4b3da3cff7282fcdfca";
       hash = "sha256-8pwoPrmkpL6jIM+Y/C0xSvyrBM/Uv0D1GuBwNm+0DHU=";

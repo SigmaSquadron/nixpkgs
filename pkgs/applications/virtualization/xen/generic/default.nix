@@ -46,6 +46,8 @@ versionDefinition:
   OVMF,
   nasm,
 
+  withInternalStubdom ? true,
+
   withInternalIPXE ? true,
   withIPXE ? !withInternalIPXE,
   ipxe,
@@ -149,6 +151,18 @@ let
         };
         patches = lib.lists.optionals (lib.attrsets.hasAttrByPath [ "patches" ] pkg.ovmf) pkg.ovmf.patches;
         path = "tools/firmware/ovmf-dir-remote";
+      };
+    }
+    // lib.attrsets.optionalAttrs withInternalStubdom {
+      miniOS = {
+        src = fetchgit {
+          url = "https://xenbits.xenproject.org/git-http/mini-os.git";
+          inherit (pkg.miniOS) rev hash;
+        };
+        patches = lib.lists.optionals (lib.attrsets.hasAttrByPath [
+          "patches"
+        ] pkg.miniOS) pkg.miniOS.patches;
+        path = "extras/mini-os";
       };
     }
     // lib.attrsets.optionalAttrs withInternalIPXE {
@@ -425,10 +439,8 @@ stdenv.mkDerivation (finalAttrs: {
   buildFlags = [
     "xen" # Build the Xen Hypervisor.
     "tools" # Build the userspace tools, such as `xl`.
-    "docs" # Build the Xen Documentation
-    # TODO: Enable the Stubdomains target. This requires another pre-fetched source: mini-os. Currently, Xen appears to build a limited version of stubdomains which does not include mini-os.
-    # "stubdom"
-  ];
+    "docs" # Build the Xen Documentation.
+  ] ++ lib.lists.optional withInternalStubdom "stubdom"; # Build the Xen Stubdomains, based on Mini-OS.
 
   enableParallelBuilding = true;
 
@@ -602,16 +614,30 @@ stdenv.mkDerivation (finalAttrs: {
   passthru = {
     efi =
       if withEFI then "boot/xen-${version}.efi" else throw "This Xen was compiled without an EFI binary.";
+
     flaskPolicy =
       if withFlask then
         "boot/xenpolicy-${version}"
       else
         throw "This Xen was compiled without FLASK support.";
+
+    stubdom =
+      if withInternalStubdom then
+        {
+          vtpm = "libexec/xen/boot/vtpm-stubdom.gz";
+          vtpmmgr = "libexec/xen/boot/vtpmmgr-stubdom.gz";
+          xenstore = "libexec/xen/boot/xenstore-stubdom.gz";
+          xenstorepvh = "libexec/xen/boot/xenstorepvh-stubdom.gz";
+        }
+      else
+        throw "This Xen was compiled without MiniOS stubdomains.";
+
     qemu-system-i386 =
       if withInternalQEMU then
         "libexec/xen/bin/qemu-system-i386"
       else
         throw "This Xen was compiled without a built-in QEMU.";
+
     # This test suite is very simple, as Xen's userspace
     # utilities require the hypervisor to be booted.
     tests = {
@@ -674,6 +700,7 @@ stdenv.mkDerivation (finalAttrs: {
                 withInternalQEMU
                 || withInternalSeaBIOS
                 || withInternalOVMF
+                || withInternalStubdom
                 || withInternalIPXE
                 || withEFI
                 || withFlask
@@ -688,6 +715,7 @@ stdenv.mkDerivation (finalAttrs: {
                 + lib.strings.optionalString withInternalQEMU "\n* `qemu-xen`: Xen's mirror of [QEMU](https://www.qemu.org/)."
                 + lib.strings.optionalString withInternalSeaBIOS "\n* `seabios-xen`: Xen's mirror of [SeaBIOS](https://www.seabios.org/SeaBIOS)."
                 + lib.strings.optionalString withInternalOVMF "\n* `ovmf-xen`: Xen's mirror of [OVMF](https://github.com/tianocore/tianocore.github.io/wiki/OVMF)."
+                + lib.strings.optionalString withInternalStubdom "\n* `minios-xen-stubdomains`: Xen's [minimal operating system](https://wiki.xenproject.org/wiki/Mini-OS), for building stubdomains."
                 + lib.strings.optionalString withInternalIPXE "\n* `ipxe-xen`: Xen's pinned version of [iPXE](https://ipxe.org/)."
               )
           # Finally, we write a notice explaining which vulnerabilities this Xen is NOT vulnerable to.

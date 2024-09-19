@@ -32,6 +32,7 @@ rec {
     withInternalQEMU = false;
     withInternalSeaBIOS = false;
     withInternalOVMF = false;
+    withInternalStubdom = false;
     withInternalIPXE = false;
     inherit (slim) meta;
   };
@@ -41,6 +42,7 @@ rec {
     withInternalQEMU = false;
     withInternalSeaBIOS = false;
     withInternalOVMF = false;
+    withInternalStubdom = false;
     withInternalIPXE = false;
     inherit (slim) meta;
   };
@@ -50,6 +52,7 @@ rec {
     withInternalQEMU = false;
     withInternalSeaBIOS = false;
     withInternalOVMF = false;
+    withInternalStubdom = false;
     withInternalIPXE = false;
     inherit (slim) meta;
   };
