@@ -505,9 +505,7 @@ stdenv.mkDerivation (finalAttrs: {
     ''
 
     # Call copyPrefetchedSources, which copies all aviable sources to their correct positions.
-    + ''
-      ${copyPrefetchedSources}
-    '';
+    + copyPrefetchedSources;
 
   postPatch =
     # The following patch forces Xen to install xen.efi on $out/boot
@@ -540,9 +538,7 @@ stdenv.mkDerivation (finalAttrs: {
     ''
 
     # # Call deployPrefetchedSourcesPatches, which patches all pre-fetched sources with their specified patchlists.
-    + ''
-      ${deployPrefetchedSourcesPatches}
-    ''
+    + deployPrefetchedSourcesPatches
     # Patch shebangs for QEMU and OVMF build scripts.
     + lib.strings.optionalString withInternalQEMU ''
       patchShebangs --build tools/qemu-xen/scripts/tracetool.py
