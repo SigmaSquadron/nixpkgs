@@ -10,6 +10,7 @@ versionDefinition:
   which,
 
   fetchgit,
+  fetchurl,
   fetchFromGitHub,
 
   # Xen
@@ -232,6 +233,56 @@ let
           ) prefetchedSources.${source}.patches)
         ) prefetchedSourcesList
       )
+    );
+
+  # The stubdomain also needs external tar.xz files.
+  extFiles = (
+    let
+      extFile =
+        # The extFile function takes in a `pname` attribute for the external file's name, and an extension attribute for the type of archive extension used by said file.
+        pname: extension:
+        let
+          name = "${pname}-${pkg.extFiles.${pname}.version}${extension}"; # Example output: zlib-1.2.3.tar.gz
+        in
+        {
+          src = fetchurl {
+            url = "https://xenbits.xenproject.org/xen-extfiles/${name}";
+            hash = pkg.extFiles.${pname}.hash;
+          };
+          path = "stubdom/${name}";
+        };
+    in
+    {
+      gmp = extFile "gmp" ".tar.bz2";
+      lwip = extFile "lwip" ".tar.gz";
+      newlib = extFile "newlib" ".tar.gz";
+      pciutils = extFile "pciutils" ".tar.bz2";
+      polarssl = extFile "polarssl" "-gpl.tgz";
+      tpm_emulator = extFile "tpm_emulator" ".tar.gz";
+      zlib = extFile "zlib" ".tar.gz";
+    }
+  );
+
+  extFilesList = lib.attrsets.mapAttrsToList (name: value: name) extFiles;
+
+  copyExtFiles =
+    # Finish the deployment by concatnating the list of commands together.
+    lib.strings.concatLines (
+      # Iterate on each extfile.
+      builtins.map (
+        extFile:
+        # Only produce a copy command if patches exist.
+        lib.strings.optionalString (lib.attrsets.hasAttrByPath [ "${extFile}" ] extFiles)
+          # The actual copy command. `src` is always an absolute path to a fetcher output
+          # inside the /nix/store, and `path` is always a path relative to the Xen root.
+          # We need to `mkdir -p` the target directory first, and `chmod +w` the contents last,
+          # as the copied files will still be edited by the postPatchPhase.
+          ''
+            echo "Copying ${extFiles.${extFile}.src} -> ${extFiles.${extFile}.path}"
+            cp ${extFiles.${extFile}.src} ${extFiles.${extFile}.path}
+            chmod +w ${extFiles.${extFile}.path}
+          ''
+      ) extFilesList
     );
 
   ## XSA Patches Description Builder ##
@@ -505,7 +556,8 @@ stdenv.mkDerivation (finalAttrs: {
     ''
 
     # Call copyPrefetchedSources, which copies all aviable sources to their correct positions.
-    + copyPrefetchedSources;
+    + copyPrefetchedSources
+    + lib.optionalString withInternalStubdom copyExtFiles;
 
   postPatch =
     # The following patch forces Xen to install xen.efi on $out/boot

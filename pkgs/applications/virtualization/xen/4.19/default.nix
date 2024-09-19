@@ -58,5 +58,35 @@ callPackage (import ../generic/default.nix {
       hash = "sha256-8pwoPrmkpL6jIM+Y/C0xSvyrBM/Uv0D1GuBwNm+0DHU=";
       patches = [ ];
     };
+    extFiles = {
+      gmp = {
+        version = "4.3.2";
+        hash = "sha256-k2FiwDEohsIVgQAreZMoKaoEjPr5k3xiZa6qFPHNF3U=";
+      };
+      lwip = {
+        version = "1.3.0";
+        hash = "sha256-dy5NVQ4HgmZl7QUowHHdVATvfb4YJaOMitvCoAvKlI8=";
+      };
+      newlib = {
+        version = "1.16.0";
+        hash = "sha256-20JjlJZcSMHSkCPhzG2WXqa5qQNdioSb4nUMpGWaPQc=";
+      };
+      pciutils = {
+        version = "2.2.9";
+        hash = "sha256-9grmHPvV2h2EnQvqoh9ZPDjayTWfCz3cYS9EdAgmWyQ=";
+      };
+      polarssl = {
+        version = "1.1.4";
+        hash = "sha256-LSn9BKDQuina5r0p+0GJRMCNORZmXcynSvspfvN1hLY=";
+      };
+      tpm_emulator = {
+        version = "0.7.4";
+        hash = "sha256-TkjqDYPdlEHMGvBKsYzWyWG5+lTVy/LC/u4DiYjepFk=";
+      };
+      zlib = {
+        version = "1.2.3";
+        hash = "sha256-F5XH0GekMXQRP98DRHUy83PhxsV8CNYdnk6b5eJEsF4=";
+      };
+    };
   };
 }) ({ ocamlPackages = ocaml-ng.ocamlPackages_4_14; } // genericDefinition)
