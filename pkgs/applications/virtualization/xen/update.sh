@@ -72,6 +72,17 @@ for version in "${supportedVersions[@]}"; do
     ipxeVersion="$(grep "IPXE_GIT_TAG :=" /tmp/xenUpdateScript/xen/tools/firmware/etherboot/Makefile | sed s/"IPXE_GIT_TAG := "//g)"
     echo "done!"
 
+    # Find the versions for the extFiles.
+    echo -e -n "Determining extFiles from stubdom ./configure script..."
+    gmpVersion="$(grep 'GMP_VERSION="' /tmp/xenUpdateScript/xen/stubdom/configure | sed 's/GMP_VERSION="//g;s/"//g')"
+    lwipVersion="$(grep 'LWIP_VERSION="' /tmp/xenUpdateScript/xen/stubdom/configure | sed 's/LWIP_VERSION="//g;s/"//g')"
+    newlibVersion="$(grep 'NEWLIB_VERSION="' /tmp/xenUpdateScript/xen/stubdom/configure | sed 's/NEWLIB_VERSION="//g;s/"//g')"
+    pciutilsVersion="$(grep 'LIBPCI_VERSION="' /tmp/xenUpdateScript/xen/stubdom/configure | sed 's/LIBPCI_VERSION="//g;s/"//g')"
+    polarsslVersion="$(grep 'POLARSSL_VERSION="' /tmp/xenUpdateScript/xen/stubdom/configure | sed 's/POLARSSL_VERSION="//g;s/"//g')"
+    tpm_emulatorVersion="$(grep 'TPMEMU_VERSION="' /tmp/xenUpdateScript/xen/stubdom/configure | sed 's/TPMEMU_VERSION="//g;s/"//g')"
+    zlibVersion="$(grep 'ZLIB_VERSION="' /tmp/xenUpdateScript/xen/stubdom/configure | sed 's/ZLIB_VERSION="//g;s/"//g')"
+    echo -e "done!\n"
+
     # Use `nix-prefetch-git` to fetch `rev`s and `hash`es.
     echo "Pre-fetching sources and determining hashes..."
     echo -e -n "  \e[1;32mXen\e[0m..."
@@ -92,13 +103,57 @@ for version in "${supportedVersions[@]}"; do
     echo -e -n "  \e[1;36mOVMF\e[0m..."
     ovmfHash="$(nix-prefetch-git --url https://xenbits.xenproject.org/git-http/ovmf.git --rev "$ovmfVersion" --quiet --fetch-submodules | grep -ie hash | sed s/'  "hash": "'//g | sed s/'",'//g)"
     echo "done!"
+    echo -e -n "  \e[1;36mMiniOS\e[0m..."
+    fetchMiniOS=$(nix-prefetch-git --url https://xenbits.xenproject.org/git-http/mini-os.git --rev "$miniOSVersion" --quiet --fetch-submodules)
+    finalMiniOSVersion="$(echo "$fetchMiniOS" | tr ', ' '\n ' | grep -ie rev | sed s/'  "rev": "'//g | sed s/'"'//g)"
+    miniOSHash="$(echo "$fetchMiniOS" | tr ', ' '\n ' | grep -ie hash | sed s/'  "hash": "'//g | sed s/'"'//g)"
+    echo "done!"
     echo -e -n "  \e[1;36miPXE\e[0m..."
     ipxeHash="$(nix-prefetch-git --url https://github.com/ipxe/ipxe.git --rev "$ipxeVersion" --quiet | grep -ie hash | sed s/'  "hash": "'//g | sed s/'",'//g)"
     echo "done!"
 
+    # Find the hashes of the extFiles through `nix store prefetch-file`.
+    echo -e "Pre-fetching extFiles and determining hashes..."
+    echo -e -n "  \e[1;36mgmp\e[0m..."
+    gmpHash="$(nix store prefetch-file https://xenbits.xenproject.org/xen-extfiles/gmp-$gmpVersion.tar.bz2 --json 2> /dev/null | sed 's/{"hash":"//g' | sed s/'","storePath":".*'//g)"
+    echo "done!"
+    echo -e -n "  \e[1;36mlwip\e[0m..."
+    lwipHash="$(nix store prefetch-file https://xenbits.xenproject.org/xen-extfiles/lwip-$lwipVersion.tar.gz --json 2> /dev/null | sed 's/{"hash":"//g' | sed s/'","storePath":".*'//g)"
+    echo "done!"
+    echo -e -n "  \e[1;36mnewlib\e[0m..."
+    newlibHash="$(nix store prefetch-file https://xenbits.xenproject.org/xen-extfiles/newlib-$newlibVersion.tar.gz --json 2> /dev/null | sed 's/{"hash":"//g' | sed s/'","storePath":".*'//g)"
+    echo "done!"
+    echo -e -n "  \e[1;36mpciutils\e[0m..."
+    pciutilsHash="$(nix store prefetch-file https://xenbits.xenproject.org/xen-extfiles/pciutils-$pciutilsVersion.tar.bz2 --json 2> /dev/null | sed 's/{"hash":"//g' | sed s/'","storePath":".*'//g)"
+    echo "done!"
+    echo -e -n "  \e[1;36mpolarssl\e[0m..."
+    polarsslHash="$(nix store prefetch-file https://xenbits.xenproject.org/xen-extfiles/polarssl-$polarsslVersion-gpl.tgz --json 2> /dev/null | sed 's/{"hash":"//g' | sed s/'","storePath":".*'//g)"
+    echo "done!"
+    echo -e -n "  \e[1;36mtpm_emulator\e[0m..."
+    tpm_emulatorHash="$(nix store prefetch-file https://xenbits.xenproject.org/xen-extfiles/tpm_emulator-$tpm_emulatorVersion.tar.gz --json 2> /dev/null | sed 's/{"hash":"//g' | sed s/'","storePath":".*'//g)"
+    echo "done!"
+    echo -e -n "  \e[1;36mzlib\e[0m..."
+    zlibHash="$(nix store prefetch-file https://xenbits.xenproject.org/xen-extfiles/zlib-$zlibVersion.tar.gz --json 2> /dev/null | sed 's/{"hash":"//g' | sed s/'","storePath":".*'//g)"
+    echo "done!"
+
     cd "$xenPath"
 
-    echo -e "\nFound the following revisions:\n  \e[1;32mXen\e[0m:     \e[1;33m$finalVersion\e[0m (\e[1;33m$hash\e[0m)\n  \e[1;36mQEMU\e[0m:    \e[1;33m$finalQEMUVersion\e[0m (\e[1;33m$qemuHash\e[0m)\n  \e[1;36mSeaBIOS\e[0m: \e[1;33m$finalSeaBIOSVersion\e[0m (\e[1;33m$seaBIOSHash\e[0m)\n  \e[1;36mOVMF\e[0m:    \e[1;33m$ovmfVersion\e[0m (\e[1;33m$ovmfHash\e[0m)\n  \e[1;36miPXE\e[0m:    \e[1;33m$ipxeVersion\e[0m (\e[1;33m$ipxeHash\e[0m)"
+    echo -e "\nFound the following revisions:\
+    \n  \e[1;32mXen\e[0m:     \e[1;33m$finalVersion\e[0m (\e[1;33m$hash\e[0m)\
+    \n  \e[1;36mQEMU\e[0m:    \e[1;33m$finalQEMUVersion\e[0m (\e[1;33m$qemuHash\e[0m)\
+    \n  \e[1;36mSeaBIOS\e[0m: \e[1;33m$finalSeaBIOSVersion\e[0m (\e[1;33m$seaBIOSHash\e[0m)\
+    \n  \e[1;36mOVMF\e[0m:    \e[1;33m$ovmfVersion\e[0m (\e[1;33m$ovmfHash\e[0m)\
+    \n  \e[1;36mMiniOS\e[0m:  \e[1;33m$finalMiniOSVersion\e[0m (\e[1;33m$miniOSHash\e[0m)\
+    \n  \e[1;36miPXE\e[0m:    \e[1;33m$ipxeVersion\e[0m (\e[1;33m$ipxeHash\e[0m)\
+    \n\
+    \n  \e[1;32mextFiles\e[0m:\
+    \n  \e[1;36mgmp\e[0m:          \e[1;33m$gmpVersion\e[0m  (\e[1;33m$gmpHash\e[0m)\
+    \n  \e[1;36mlwip\e[0m:         \e[1;33m$lwipVersion\e[0m  (\e[1;33m$lwipHash\e[0m)\
+    \n  \e[1;36mnewlib\e[0m:       \e[1;33m$newlibVersion\e[0m (\e[1;33m$newlibHash\e[0m)\
+    \n  \e[1;36mpciutils\e[0m:     \e[1;33m$pciutilsVersion\e[0m  (\e[1;33m$pciutilsHash\e[0m)\
+    \n  \e[1;36mpolarssl\e[0m:     \e[1;33m$polarsslVersion\e[0m  (\e[1;33m$polarsslHash\e[0m)\
+    \n  \e[1;36mtpm_emulator\e[0m: \e[1;33m$tpm_emulatorVersion\e[0m  (\e[1;33m$tpm_emulatorHash\e[0m)\
+    \n  \e[1;36mzlib\e[0m:         \e[1;33m$zlibVersion\e[0m  (\e[1;33m$zlibHash\e[0m)"
 
     # Set OCaml Version
     read -r -p $'\nEnter the corresponding \e[1;33mOCaml\e[0m version for \e[1;32mXen '"$version"$'\e[0m, or press \e[1;34menter\e[0m for the default value of \e[1;32m4_14\e[0m: ' ocamlVersion
@@ -116,15 +171,23 @@ for version in "${supportedVersions[@]}"; do
     discoveredQEMUPatches="$(find "$branch"/ -type f -name "[0-9][0-9][0-9][0-9]-qemu-*-$branch.patch" -printf "./%f ")"
     discoveredSeaBIOSPatches="$(find "$branch"/ -type f -name "[0-9][0-9][0-9][0-9]-seabios-*-$branch.patch" -printf "./%f ")"
     discoveredOVMFPatches="$(find "$branch"/ -type f -name "[0-9][0-9][0-9][0-9]-ovmf-*-$branch.patch" -printf "./%f ")"
+    discoveredMiniOSPatches="$(find "$branch"/ -type f -name "[0-9][0-9][0-9][0-9]-minios-*-$branch.patch" -printf "./%f ")"
     discoveredIPXEPatches="$(find "$branch"/ -type f -name "[0-9][0-9][0-9][0-9]-ipxe-*-$branch.patch" -printf "./%f ")"
 
     discoveredXenPatchesEcho=${discoveredXenPatches:-"\e[1;31mNone found!\e[0m"}
     discoveredQEMUPatchesEcho=${discoveredQEMUPatches:-"\e[1;31mNone found!\e[0m"}
     discoveredSeaBIOSPatchesEcho=${discoveredSeaBIOSPatches:-"\e[1;31mNone found!\e[0m"}
     discoveredOVMFPatchesEcho=${discoveredOVMFPatches:-"\e[1;31mNone found!\e[0m"}
+    discoveredMiniOSPatchesEcho=${discoveredMiniOSPatches:-"\e[1;31mNone found!\e[0m"}
     discoveredIPXEPatchesEcho=${discoveredIPXEPatches:-"\e[1;31mNone found!\e[0m"}
 
-    echo -e "Found the following patches:\n  \e[1;32mXen\e[0m:     \e[1;33m$discoveredXenPatchesEcho\e[0m\n  \e[1;36mQEMU\e[0m:    \e[1;33m$discoveredQEMUPatchesEcho\e[0m\n  \e[1;36mSeaBIOS\e[0m: \e[1;33m$discoveredSeaBIOSPatchesEcho\e[0m\n  \e[1;36mOVMF\e[0m:    \e[1;33m$discoveredOVMFPatchesEcho\e[0m\n  \e[1;36miPXE\e[0m:    \e[1;33m$discoveredIPXEPatchesEcho\e[0m"
+    echo -e "Found the following patches:\
+    \n  \e[1;32mXen\e[0m:     \e[1;33m$discoveredXenPatchesEcho\e[0m\
+    \n  \e[1;36mQEMU\e[0m:    \e[1;33m$discoveredQEMUPatchesEcho\e[0m\
+    \n  \e[1;36mSeaBIOS\e[0m: \e[1;33m$discoveredSeaBIOSPatchesEcho\e[0m\
+    \n  \e[1;36mOVMF\e[0m:    \e[1;33m$discoveredOVMFPatchesEcho\e[0m\
+    \n  \e[1;36mMiniOS\e[0m:  \e[1;33m$discoveredMiniOSPatchesEcho\e[0m\
+    \n  \e[1;36miPXE\e[0m:    \e[1;33m$discoveredIPXEPatchesEcho\e[0m"
 
     # Prepare patches that are called in ./patches.nix.
     defaultPatchListInit=("QUBES_REPRODUCIBLE_BUILDS" "XSA_460" "XSA_461" )
@@ -180,10 +243,45 @@ callPackage (import ../generic/default.nix {
       hash = "$ovmfHash";
       patches = [ $discoveredOVMFPatches ];
     };
+    miniOS = {
+      rev = "$finalMiniOSVersion";
+      hash = "$miniOSHash";
+      patches = [ $discoveredMiniOSPatches ];
+    };
     ipxe = {
       rev = "$ipxeVersion";
       hash = "$ipxeHash";
       patches = [ $discoveredIPXEPatches ];
+    };
+    extFiles = {
+      gmp = {
+        version = "$gmpVersion";
+        hash = "$gmpHash";
+      };
+      lwip = {
+        version = "$lwipVersion";
+        hash = "$lwipHash";
+      };
+      newlib = {
+        version = "$newlibVersion";
+        hash = "$newlibHash";
+      };
+      pciutils = {
+        version = "$pciutilsVersion";
+        hash = "$pciutilsHash";
+      };
+      polarssl = {
+        version = "$polarsslVersion";
+        hash = "$polarsslHash";
+      };
+      tpm_emulator = {
+        version = "$tpm_emulatorVersion";
+        hash = "$tpm_emulatorHash";
+      };
+      zlib = {
+        version = "$zlibVersion";
+        hash = "$zlibHash";
+      };
     };
   };
 }) ({ ocamlPackages = ocaml-ng.ocamlPackages_$ocamlVersion; } // genericDefinition)
