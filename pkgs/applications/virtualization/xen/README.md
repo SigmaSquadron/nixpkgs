@@ -62,6 +62,7 @@ Where:
    - For the pre-fetched QEMU, use `qemu`.
    - For SeaBIOS, use `seabios`.
    - For OVMF, use `ovmf`.
+   - For MiniOS, use `minios`.
    - For iPXE, use `ipxe`.
 1. `description` is a string with uppercase and lowercase letters, numbers and
    dashes. It describes the patch name and what it does to the upstream code.
@@ -134,12 +135,14 @@ to save you the need to compile `efiBinutils`.
 By default, Xen also builds
 [QEMU](https://www.qemu.org/),
 [SeaBIOS](https://www.seabios.org/SeaBIOS),
-[OVMF](https://github.com/tianocore/tianocore.github.io/wiki/OVMF) and
+[OVMF](https://github.com/tianocore/tianocore.github.io/wiki/OVMF),
+[Mini-OS](https://wiki.xenproject.org/wiki/Mini-OS) and
 [iPXE](https://ipxe.org/).
 
 - QEMU is used for stubdomains and handling devices.
 - SeaBIOS is the default legacy BIOS ROM for HVM domains.
 - OVMF is the default UEFI ROM for HVM domains.
+- MiniOS includes the building blocks for minimal Xen Stub Domains.
 - iPXE provides a PXE boot environment for HVMs.
 
 However, those packages are already available on Nixpkgs, and Xen does not
