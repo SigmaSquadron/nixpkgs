@@ -557,7 +557,19 @@ stdenv.mkDerivation (finalAttrs: {
 
     # Call copyPrefetchedSources, which copies all aviable sources to their correct positions.
     + copyPrefetchedSources
-    + lib.optionalString withInternalStubdom copyExtFiles;
+
+    # Copy extFile archives and patch zlib's `ar` flag calls.
+    # The zlib patch must be done by the Xen makefiles, as it
+    # must occur between the unpacking and build of the zlib
+    # external file.
+    + lib.optionalString withInternalStubdom (
+      copyExtFiles
+      + ''
+        substituteInPlace stubdom/Makefile \
+          --replace-fail "mv zlib-\$(ZLIB_VERSION) \$@" \
+          "patch --directory zlib-${pkg.extFiles.zlib.version} --strip 1 < ${./0000-extfiles-zlib-split-ar-flags-generic.patch}; mv zlib-${pkg.extFiles.zlib.version} \$@"
+      ''
+    );
 
   postPatch =
     # The following patch forces Xen to install xen.efi on $out/boot

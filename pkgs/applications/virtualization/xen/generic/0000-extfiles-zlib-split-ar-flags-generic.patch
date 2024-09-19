@@ -1,0 +1,55 @@
+Hack to fix the `ar` call by the zlib Makefile.
+
+diff zlib-1.2.3/configure zlib-1.2.3-patched/configure
+--- zlib-1.2.3/configure	2005-07-11 22:11:57.000000000 +0200
++++ zlib-1.2.3-patched/configure	2024-09-15 00:28:24.240369190 +0200
+@@ -23,7 +23,8 @@
+ VER=`sed -n -e '/VERSION "/s/.*"\(.*\)".*/\1/p' < zlib.h`
+ VER2=`sed -n -e '/VERSION "/s/.*"\([0-9]*\\.[0-9]*\)\\..*/\1/p' < zlib.h`
+ VER1=`sed -n -e '/VERSION "/s/.*"\([0-9]*\)\\..*/\1/p' < zlib.h`
+-AR=${AR-"ar rc"}
++AR=${AR-"ar"}
++ARFLAGS=${ARFLAGS-"rc"}
+ RANLIB=${RANLIB-"ranlib"}
+ prefix=${prefix-/usr/local}
+ exec_prefix=${exec_prefix-'${prefix}'}
+@@ -128,7 +129,8 @@
+              CFLAGS=${CFLAGS-"-4 -O"}
+              LDSHARED=${LDSHARED-"cc"}
+              RANLIB=${RANLIB-"true"}
+-             AR="cc -A";;
++             AR="cc"
++             ARFLAGS="-A";;
+   SCO_SV\ 3.2*) SFLAGS=${CFLAGS-"-O3 -dy -KPIC "}
+              CFLAGS=${CFLAGS-"-O3"}
+              LDSHARED=${LDSHARED-"cc -dy -KPIC -G"};;
+@@ -448,6 +450,7 @@
+ /^SHAREDLIBV *=/s#=.*#=$SHAREDLIBV#
+ /^SHAREDLIBM *=/s#=.*#=$SHAREDLIBM#
+ /^AR *=/s#=.*#=$AR#
++/^ARFLAGS *=/s#=.*#=$ARFLAGS#
+ /^RANLIB *=/s#=.*#=$RANLIB#
+ /^EXE *=/s#=.*#=$EXE#
+ /^prefix *=/s#=.*#=$prefix#
+diff '--color=auto' -ur zlib-1.2.3/Makefile.in zlib-1.2.3-patched/Makefile.in
+--- zlib-1.2.3/Makefile.in	2005-07-18 04:25:21.000000000 +0200
++++ zlib-1.2.3-patched/Makefile.in	2024-09-15 00:24:51.016289837 +0200
+@@ -33,7 +33,8 @@
+ SHAREDLIBV=libz.so.1.2.3
+ SHAREDLIBM=libz.so.1
+
+-AR=ar rc
++AR=ar
++ARFLAGS=rc
+ RANLIB=ranlib
+ TAR=tar
+ SHELL=/bin/sh
+@@ -68,7 +69,7 @@
+ 	fi
+
+ libz.a: $(OBJS) $(OBJA)
+-	$(AR) $@ $(OBJS) $(OBJA)
++	$(AR) $(ARFLAGS) $@ $(OBJS) $(OBJA)
+ 	-@ ($(RANLIB) $@ || true) >/dev/null 2>&1
+
+ match.o: match.S
